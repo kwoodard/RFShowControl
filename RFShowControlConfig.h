@@ -31,12 +31,16 @@
     #define    __CSN  7
 	#define HEARTBEAT_PIN  A1
 	#define HEARTBEAT_PIN_1  3
-	
+
 #elif (NRF_TYPE == WM_2999_NRF) || \
   (NRF_TYPE == RFCOLOR_2_4) || \
   (NRF_TYPE == RAPTOR12) 
     #define    __CE  9
     #define    __CSN  10
+
+#elif (NRF_TYPE == WL_SHIELD)
+    #define    __CE  10
+    #define    __CSN  8
 #else
   #error Must define an NRF type!
 #endif
@@ -228,7 +232,7 @@ const uint64_t pipes[2] = {
     (PIXEL_TYPE != TM_1809) && \
     (PIXEL_TYPE != TM_1803) && \
     (PIXEL_TYPE != UCS_1903) && \
-    (PIXEL_TYPE != DMX) && \ 
+    (PIXEL_TYPE != DMX) && \
 	(PIXEL_TYPE != STROBE) && \
     (PIXEL_TYPE != NONE))
   #error "You must define PIXEL_TYPE as one of the following:"

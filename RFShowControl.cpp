@@ -64,9 +64,9 @@ bool RFShowControl::Initialize(int pRole, const uint64_t *pPipes, int pChannel, 
   this->payloadSizeSetSuccessful = false;
   this->begin(); //initalize RF
   this->setRetries(0,0); //set # of retries & delay between retries
+  this->_rfDataRate = pDataRate; // save off data rate
   this->dataRateSuccess = this->setDataRate(pDataRate); //set RF data rate
   this->setPayloadSize(32); //set RF packet size
-
   if (this->getPayloadSize() == 32)
   {
     this->payloadSizeSetSuccessful = true;
@@ -280,6 +280,7 @@ uint8_t* RFShowControl::GetControllerDataBase(uint8_t pLogicalControllerNumber)
   }
 
   PrintControllerConfig();
+  return NULL; /* Could not find controller config */
 }
 
 void RFShowControl::SetStartAndEndChannels(void)
@@ -361,11 +362,7 @@ void RFShowControl::processLogicalConfigPacket(uint8_t *pLogicalConfigPacket)
 bool RFShowControl::ConfigureReceiverAtStartup(uint32_t pReceiverId) {
 
   //Get the current time, This will break out of configuration if longer than RF_CONFIG_STARTUP_WINDOW
-  ControllerInfo *ciTemp;
   bool returnValue = false;
-  int rfListenChannel = 0;
-  int rfListenRate = 0;
-  int numberOfLogicalControllers = 0;
 
   if (this->available())
   {
@@ -393,7 +390,6 @@ bool RFShowControl::ConfigureReceiverAtStartup(uint32_t pReceiverId) {
       uint32_t version = EEPROM_VERSION;
       eeprom_write_bytes(EEPROM_VERSION_IDX, (byte *) &version, 4);
       eeprom_write_bytes(EEPROM_CONTROLLER_CONFIG_IDX, (byte *)this->packetData, EEPROM_PACKET_SIZE);
-      int lControllerCount = 0;
 
       //get each logical controller
       for(int i = 0; i < numLogic;)
@@ -612,9 +608,48 @@ bool RFShowControl::EnableOverTheAirConfiguration(uint8_t enabled)
     this->_otaConfigEnable = true;
   else
     this->_otaConfigEnable = false;
+    
+  return this->_otaConfigEnable;
 }
 
 int RFShowControl::GetNumberOfChannels(int pLogicalController)
 {
   return this->_controllers[pLogicalController].numChannels;
+}
+
+/**
+SendPackets
+  Sends all the data currently set in the channelData memory region.  
+*/
+void RFShowControl::SendPackets(int pLogicalController)
+{
+  static uint8_t packetBuffer[RF_PACKET_LENGTH];
+  uint32_t channelsTransmitted = 0;
+  uint32_t packetsTransmitted = 0;
+  uint8_t * buffer = GetControllerDataBase(pLogicalController);
+  int _rfinterpacketdelay = this->_rfDataRate == RF24_1MBPS ? 700 : 1500;
+  
+  while (channelsTransmitted < GetNumberOfChannels(pLogicalController) )
+  {
+    // Determine the number of channels to transmit in this packet
+    uint32_t channelsToTransmit = CHANNELS_PER_PACKET;
+    uint32_t channelsRemaining = GetNumberOfChannels(pLogicalController) - channelsTransmitted;
+    if (channelsRemaining < CHANNELS_PER_PACKET)
+    {
+        channelsToTransmit = channelsRemaining;
+    }
+    
+    // Copy channel data. If a partial packet, the remaining bytes will contain stale data,
+    // but if the system is properly configured, this data will not be used.  If desired,
+    // a memset could be added to clear the buffer each time, but this will take more
+    // processing cycles.
+    memcpy(packetBuffer, &buffer[channelsTransmitted], channelsRemaining);
+    
+    // Add the packet sequence counter and send the packet
+    packetBuffer[PACKET_SEQ_IDX] = packetsTransmitted++;
+    this->write_payload(packetBuffer, RF_PACKET_LENGTH);
+    channelsTransmitted += channelsRemaining;
+
+    delayMicroseconds(_rfinterpacketdelay);
+  }
 }

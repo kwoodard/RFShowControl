@@ -4,7 +4,9 @@
  * Created on: June 20th, 2013
  * Author: Mat Mrosko
  *
- * Updated: May 18, 2014 - Mat Mrosko, Materdaddy, rfpixelcontrol@matmrosko.com
+ * Revision History: 
+ *   May 18, 2014 - Mat Mrosko, Materdaddy, rfpixelcontrol@matmrosko.com
+ *   December 24, 2014 - Keith Woodard, kwoodard, rkwoodard@gmail.com
  *
  * License:
  *    Users of this software agree to hold harmless the creators and
@@ -22,14 +24,14 @@
 
 #include <Arduino.h>
 
-#include "IRFShowControl.h"
-#include "RFShowControl.h"
 
-class RenardControl: public IRFShowControl
+class RenardControl
 {
 public:
   RenardControl(uint32_t baud_rate);
-  void Paint(void);
+  void Begin(uint8_t * dataBuffer, uint32_t channelCount);
+  void Write(void);
+  boolean Read(void);
 };
 
 #endif //__RENARDCONTROL_H__

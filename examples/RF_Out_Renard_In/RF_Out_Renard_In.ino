@@ -1,13 +1,17 @@
 /*
  * Renard Transmitter
  *
- * TODO
- *
- *  Author: Greg Scull
- *      7/2013
- *   This transmitter uses
+ *  Author: Keith Woodard
+ *      12/2014
+ *   This transmitter reads Renard data via the Serial port and transmits it via RF
  */
 
+#include <RF24Wrapper.h>
+#include <RenardControl.h>
+#include <printf.h>
+#include <OTAConfig.h>
+#include <MemoryFree.h>
+#include <EEPROMUtils.h>
 #include <EEPROM.h>
 #include <nRF24L01.h>
 #include <RF24.h>
@@ -18,8 +22,8 @@
 
 /********************* START OF REQUIRED CONFIGURATION ***********************/
 // NRF_TYPE Description: http://learn.komby.com/wiki/58/configuration-settings#NRF_TYPE
-// Valid Values: RF1, MINIMALIST_SHIEILD, WM_2999_NRF, RFCOLOR_2_4
-#define NRF_TYPE                        RF1
+// Valid Values: RF1, MINIMALIST_SHIELD, WL_SHIELD, WM_2999_NRF, RFCOLOR_2_4
+#define NRF_TYPE                        WL_SHIELD
 /********************** END OF REQUIRED CONFIGURATION ************************/
 
 /****************** START OF NON-OTA CONFIGURATION SECTION *******************/
@@ -34,6 +38,8 @@
 // RENARD_BAUD_RATE Description: http://learn.komby.com/wiki/58/configuration-settings#RENARD_BAUD_RATE
 // Valid Values: 19200, 38400, 57600, 115200, 230400, 460800
 #define RENARD_BAUD_RATE                57600
+
+#define HARDCODED_NUM_CHANNELS          128
 /******************* END OF NON-OTA CONFIGURATION SECTION ********************/
 
 /************** START OF ADVANCED SETTINGS SECTION (OPTIONAL) ****************/
@@ -43,37 +49,30 @@
 
 
 #define PIXEL_TYPE                      NONE
-#define RF_WRAPPER                      1
+#define RF_WRAPPER                      0
 //Include this after all configuration variables are set
 #include "RFShowControlConfig.h"
 
-#define RF_NUM_PACKETS                  18     // 18 * 30 total channels can be broadcasted
+#define RF_NUM_PACKETS                  ((int)HARDCODED_NUM_CHANNELS + 29/30)     // Number of packets required to be transmitted.   Round up.
 #define RECEIVER_UNIQUE_ID              0
-#define PAD                             0x7D
-#define SYNC                            0x7E
-#define ESCAPE                          0x7F
-#define COMMAND                         0x80
 
-volatile unsigned int sub1=0;
-volatile bool packetready=false;
 
-//Initialize the RF packet buffer
-byte str[RF_NUM_PACKETS][32];
-
+RenardControl renard(RENARD_BAUD_RATE );
+const uint8_t logicalControllerNumber = 0;
 
 void setup(void)
 {
   radio.Initialize(radio.TRANSMITTER, pipes, TRANSMIT_CHANNEL, DATA_RATE, RECEIVER_UNIQUE_ID);
-  UCSR0C |= (1<<USBS0);
-  Serial.begin(RENARD_BAUD_RATE);
+  renard.Begin(radio.GetControllerDataBase(logicalControllerNumber) , HARDCODED_NUM_CHANNELS);
+  radio.SendPackets(logicalControllerNumber);
 }
 
 void loop(void)
 {
-  if (packetready )
-  //If there is a packet ready to write to the radio...Write it!
+  //If the renard protocol returned valid data stream, write it to the RF interface
+  if (renard.Read() == true)
   {
-    packetready=false;
-    radio.write_payload( &str[sub1-1], 32 );
+    radio.SendPackets(logicalControllerNumber);
   }
 }
+

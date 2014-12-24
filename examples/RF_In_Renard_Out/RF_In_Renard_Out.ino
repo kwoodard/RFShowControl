@@ -23,9 +23,10 @@
 #include <RF24.h>
 #include <SPI.h>
 
-#include "IRFShowControl.h"
+//#include "IRFShowControl.h"
 //#include "printf.h"
 #include "RFShowControl.h"
+#include "RenardControl.h"
 
 
 /********************* START OF REQUIRED CONFIGURATION ***********************/
@@ -78,11 +79,11 @@
 //Include this after all configuration variables are set
 #include "RFShowControlConfig.h"
 
+RenardControl renard(RENARD_BAUD_RATE);
 int beat = 0;
 
 void setup(void)
 {
-  Serial.begin(RENARD_BAUD_RATE);
 #ifdef DEBUG
   printf_begin();
   Serial.println("Initializing Radio");
@@ -106,20 +107,15 @@ void setup(void)
 #endif
 
   logicalControllerNumber = 0;
-  strip.Begin(radio.GetControllerDataBase(logicalControllerNumber), radio.GetNumberOfChannels(logicalControllerNumber++));
-
-  for (int i = 0; i < strip.GetElementCount(); i++)
-  {
-    strip.SetElementColor(i, strip.Color(0, 0, 0));
-  }
-  strip.Paint();
+  renard.Begin(radio.GetControllerDataBase(logicalControllerNumber), radio.GetNumberOfChannels(logicalControllerNumber++));
+  renard.Paint();
 }
 
 void loop(void)
 {
  if (radio.Listen())
  {
-   strip.Paint();
+   renard.Write();
    #if (NRF_TYPE==KOMBEE)
      beat=!beat;
      digitalWrite(HEARTBEAT_PIN, beat);  

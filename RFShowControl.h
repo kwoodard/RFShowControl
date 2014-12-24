@@ -52,6 +52,7 @@
 #define KOMBEE                          9
 #define KOMBLINKIN						10
 #define RAPTOR12						11
+#define WL_SHIELD                       12
 
 //PIXEL TYPES
 #define GECE                            1
@@ -142,6 +143,12 @@ public:
   void AddLogicalController(uint8_t pLControllerName, uint32_t pLcontrollerStartChannel, uint32_t pLControllerNumChannels, uint32_t pLControllerBaudRate);
 
   void PrintControllerConfig(void);
+  
+  /**
+  SendPackets
+    Sends all the data currently set in the channelData memory region.  
+  */
+  void SendPackets(int pLogicalController);
 
 private:
 
@@ -154,6 +161,7 @@ private:
   uint32_t _startChannel;
   uint32_t _endChannel;
   bool _otaConfigEnable;
+  rf24_datarate_e _rfDataRate;
 };
 
 #endif //__RFSHOWCONTROL_H__
